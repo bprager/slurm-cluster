@@ -1,13 +1,16 @@
 # Experimental Slurm Cluster Architecture
 
+> 📁 This document is located in the `docs/` subdirectory as part of the overall project structure.
+
 ## 1. Overview
 
-This document describes the architecture for an experimental Slurm-based compute cluster using a heterogeneous mix of hardware: a powerful Ubuntu host, a MacBook, and two QNAP NAS devices. The cluster is containerized using Docker where possible, and integrates with Grafana for monitoring.
+This document describes the architecture for an experimental Slurm-based compute cluster using a heterogeneous mix of hardware: a powerful Ubuntu host, a MacBook, and two QNAP NAS devices (one modern, one legacy). The cluster is containerized using Docker where possible, and integrates with Grafana for monitoring.
 
 ## 2. Objectives
 
 * Centralized Slurm controller on Ubuntu
-* Dockerized Slurm workers on MacBook and QNAP
+* Dockerized Slurm workers on MacBook and modern QNAP
+* Real or simulated `slurmd` on legacy QNAP
 * GPU support on Ubuntu worker
 * Unified monitoring with Grafana and Prometheus
 
@@ -36,10 +39,35 @@ This document describes the architecture for an experimental Slurm-based compute
   * CPU-only `slurmd` container
   * Uses override config `docker-compose.override.mac.yml`
 
-* **QNAP Devices (2x)**
+* **QNAP #1 (QTS 5.1.0.60)**
 
-  * Runs `slurmd` in Docker via ContainerStation or CLI
+  * Runs `slurmd` in Docker via ContainerStation
   * Uses `docker-compose.override.qnap.yml`
+
+* **QNAP #2 (QTS 3.4.6, Legacy)**
+
+  * Does not support Docker or ContainerStation
+  * Possible approaches:
+
+    1. **Install Entware and Build Slurm Natively**
+
+       * Install Entware and dependencies
+       * Build Slurm from source with `munge`
+    2. **Use Lightweight Chroot**
+
+       * Deploy Alpine or Debian in a chroot
+       * Run `slurmd` inside the environment
+    3. **Cross-Compile Static `slurmd` Binary**
+
+       * Build statically linked Slurm binary on another machine
+       * Deploy and run manually
+    4. **QEMU-Based Emulation** (least recommended)
+
+       * Run a Linux VM in QEMU
+    5. **Fallback Role**
+
+       * Serve as NFS job storage or logging node
+       * Simulated node in `slurm.conf` (no `slurmd`)
 
 ### 3.3 Monitoring Stack
 
@@ -72,7 +100,7 @@ shared/
 
 * `docker-compose.yml`: Base definition
 * `docker-compose.override.mac.yml`: MacBook worker
-* `docker-compose.override.qnap.yml`: QNAP workers
+* `docker-compose.override.qnap.yml`: QNAP (modern) worker
 
 ### 5.3 Commands
 
@@ -84,46 +112,7 @@ docker compose up -d
 # On MacBook
 docker compose -f docker-compose.yml -f docker-compose.override.mac.yml up -d
 
-# On QNAP
-docker compose -f docker-compose.yml -f docker-compose.override.qnap.yml up -d
+# On QNAP #1 (modern)
+docker compose -f docker-compose.yml -f docker-compose.ove
 ```
-
-## 6. PlantUML Architecture Diagram
-
-```plantuml
-@startuml
-node "Ubuntu Host" {
-  component "slurmctld"
-  component "slurmd (GPU)"
-  database "slurmdbd (optional)"
-  component "Prometheus"
-  component "Grafana"
-}
-
-node "MacBook" {
-  component "slurmd (Docker)"
-}
-
-node "QNAP #1" {
-  component "slurmd (Docker)"
-}
-
-node "QNAP #2" {
-  component "slurmd (Docker)"
-}
-
-Ubuntu Host --> MacBook : Docker Network
-Ubuntu Host --> QNAP #1 : Docker Network
-Ubuntu Host --> QNAP #2 : Docker Network
-Ubuntu Host --> Prometheus : Metrics
-Prometheus --> Grafana : Data Source
-@enduml
-```
-
-## 7. Future Extensions
-
-* Integrate `slurmdbd` and MariaDB for accounting
-* Add GPU workers on other nodes (if supported)
-* Central NFS job directory shared from QNAP
-* Advanced scheduling and SLURM job accounting
 
