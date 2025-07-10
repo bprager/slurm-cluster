@@ -1,0 +1,85 @@
+# slurm.conf - Slurm configuration file
+# See the slurm.conf man page for more information.
+
+ClusterName=experimental-cluster
+ControlMachine=slurmctld
+ControlAddr=172.20.0.10
+
+# SLURM user info
+SlurmUser=slurm
+SlurmdUser=slurm
+
+# Slurm ports
+SlurmctldPort=6817
+SlurmdPort=6818
+
+# Authentication
+AuthType=auth/munge
+CryptoType=crypto/munge
+
+# Accounting
+AccountingStorageType=accounting_storage/slurmdbd
+AccountingStorageHost=slurmdbd
+AccountingStoragePort=6819
+AccountingStorageUser=slurm
+
+# Scheduling
+SchedulerType=sched/backfill
+SelectType=select/cons_tres
+SelectTypeParameters=CR_Core_Memory
+
+# Logging
+SlurmctldDebug=debug3
+SlurmdDebug=debug3
+SlurmctldLogFile=/var/log/slurm/slurmctld.log
+SlurmdLogFile=/var/log/slurm/slurmd.log
+
+# Process tracking
+#ProctrackType=proctrack/cgroup
+ProctrackType=proctrack/linuxproc
+#TaskPlugin=task/cgroup
+
+# Node health checking
+HealthCheckProgram=/usr/local/sbin/nhc
+HealthCheckInterval=300
+
+# Job completion
+JobCompType=jobcomp/none
+
+# Topology
+TopologyPlugin=topology/tree
+
+# Power management
+PowerPlugin=power/none
+
+# Priority
+PriorityType=priority/multifactor
+PriorityDecayHalfLife=1-0
+PriorityCalcPeriod=1
+PriorityFavorSmall=NO
+PriorityMaxAge=7-0
+PriorityUsageResetPeriod=NONE
+PriorityWeightAge=1000
+PriorityWeightFairshare=10000
+PriorityWeightJobSize=1000
+PriorityWeightPartition=1000
+PriorityWeightQOS=2000
+
+# Misc
+ReturnToService=1
+WaitTime=0
+MaxJobCount=10000
+MinJobAge=300
+KillWait=30
+Waittime=0
+
+# Node definitions
+NodeName=ubuntu-gpu CPUs=32 Boards=1 SocketsPerBoard=1 CoresPerSocket=16 ThreadsPerCore=2 RealMemory=16000 Gres=gpu:1 State=UNKNOWN
+NodeName=macbook-cpu CPUs=4 Boards=1 SocketsPerBoard=1 CoresPerSocket=4 ThreadsPerCore=1 RealMemory=8000 State=UNKNOWN
+NodeName=qnap-modern CPUs=4 Boards=1 SocketsPerBoard=1 CoresPerSocket=4 ThreadsPerCore=1 RealMemory=4000 State=UNKNOWN
+NodeName=qnap-legacy CPUs=2 Boards=1 SocketsPerBoard=1 CoresPerSocket=2 ThreadsPerCore=1 RealMemory=2000 State=UNKNOWN
+
+# Partition definitions
+PartitionName=gpu Nodes=ubuntu-gpu Default=NO MaxTime=INFINITE State=UP
+PartitionName=cpu Nodes=macbook-cpu,qnap-modern,qnap-legacy Default=YES MaxTime=INFINITE State=UP
+PartitionName=all Nodes=ubuntu-gpu,macbook-cpu,qnap-modern,qnap-legacy Default=NO MaxTime=INFINITE State=UP

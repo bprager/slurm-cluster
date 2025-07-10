@@ -1,0 +1,163 @@
+networks:
+  slurm-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  slurm_data:
+  prometheus_data:
+  grafana_data:
+  mysql_data:
+
+services:
+  # Slurm Controller
+  slurmctld:
+    image: slurm:latest
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.slurm
+    container_name: slurmctld
+    hostname: slurmctld
+    networks:
+      slurm-net:
+        ipv4_address: 172.20.0.10
+    ports:
+      - "6817:6817"  # slurmctld port
+    volumes:
+      - ./shared:/etc/slurm:ro
+      - slurm_data:/var/spool/slurm
+      - ./logs:/var/log/slurm
+    environment:
+      - SLURM_NODE_TYPE=controller
+    command: ["slurmctld", "-D", "-vvv"]
+    depends_on:
+      - mysql
+    restart: unless-stopped
+
+  # Slurm Database (optional but recommended)
+  mysql:
+    image: mysql:8.0
+    container_name: slurm-mysql
+    hostname: mysql
+    networks:
+      slurm-net:
+        ipv4_address: 172.20.0.11
+    environment:
+      MYSQL_ROOT_PASSWORD: slurm_root_pass
+      MYSQL_DATABASE: slurm_acct_db
+      MYSQL_USER: slurm
+      MYSQL_PASSWORD: slurm_pass
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql-init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+  # Slurm Database Daemon
+  slurmdbd:
+    image: slurm:latest
+    container_name: slurmdbd
+    hostname: slurmdbd
+    networks:
+      slurm-net:
+        ipv4_address: 172.20.0.12
+    volumes:
+      - ./shared:/etc/slurm:ro
+      - ./logs:/var/log/slurm
+    environment:
+      - SLURM_NODE_TYPE=dbd
+    command: ["slurmdbd", "-D", "-vvv"]
+    depends_on:
+      - mysql
+    restart: unless-stopped
+
+  # Ubuntu GPU Worker (runs on same host as controller)
+  slurmd-ubuntu:
+    image: slurm:latest
+    container_name: slurmd-ubuntu
+    hostname: ubuntu-gpu
+    networks:
+      slurm-net:
+        ipv4_address: 172.20.0.20
+    volumes:
+      - ./shared:/etc/slurm:ro
+      - ./logs:/var/log/slurm
+      - /tmp:/tmp
+    environment:
+      - SLURM_NODE_TYPE=worker
+      - SLURM_NODE_NAME=ubuntu-gpu
+    command: ["slurmd", "-D", "-vvv"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    depends_on:
+      - slurmctld
+    restart: unless-stopped
+
+  # Prometheus for monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    hostname: prometheus
+    networks:
+      slurm-net:
+        ipv4_address: 172.20.0.30
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+
+  # Node Exporter (for system metrics)
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    hostname: node-exporter
+    networks:
+      slurm-net:
+        ipv4_address: 172.20.0.31
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+
+  # Slurm Exporter for job metrics
+  slurm-exporter:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.slurm-exporter
+    container_name: slurm-exporter
+    hostname: slurm-exporter
+    networks:
+      slurm-net:
+        ipv4_address: 172.20.0.34
+    ports:
+      - "18080:8080"
+    volumes:
+      - ./shared:/etc/slurm:ro
+    environment:
+      - SLURM_CONF_DIR=/etc/slurm
+    depends_on:
+      - slurmctld
+    restart: unless-stopped

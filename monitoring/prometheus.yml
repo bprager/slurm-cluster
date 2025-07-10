@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node exporters
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+          - 'node-exporter:9100'
+          - '172.20.0.32:9100'  # MacBook
+          - '172.20.0.33:9100'  # QNAP modern
+
+  # Slurm exporter (when implemented)
+  - job_name: 'slurm-exporter'
+    static_configs:
+      - targets: ['slurm-exporter:9341']
+
+  # MySQL exporter (optional)
+  - job_name: 'mysql-exporter'
+    static_configs:
+      - targets: ['mysql-exporter:9104']

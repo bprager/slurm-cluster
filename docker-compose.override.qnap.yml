@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # Modern QNAP worker
+  slurmd-qnap:
+    image: slurm:latest
+    container_name: slurmd-qnap
+    hostname: qnap-modern
+    networks:
+      slurm-net:
+        ipv4_address: 172.20.0.22
+    volumes:
+      - ./shared:/etc/slurm:ro
+      - ./logs:/var/log/slurm
+      - /tmp:/tmp
+    environment:
+      - SLURM_NODE_TYPE=worker
+      - SLURM_NODE_NAME=qnap-modern
+    command: ["slurmd", "-D", "-vvv"]
+    depends_on:
+      - slurmctld
+    restart: unless-stopped
+
+  # QNAP Node Exporter
+  node-exporter-qnap:
+    image: prom/node-exporter:latest
+    container_name: node-exporter-qnap
+    hostname: node-exporter-qnap
+    networks:
+      slurm-net:
+        ipv4_address: 172.20.0.33
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped

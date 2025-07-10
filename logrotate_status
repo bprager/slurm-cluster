@@ -1,0 +1,7 @@
+logrotate state -- version 2
+"/home/bernd/Projects/SlurmCluster/slurmd.log" 2025-7-9-18:0:0
+"/home/bernd/Projects/SlurmCluster/slurmctld.log" 2025-7-9-18:0:0
+"/home/bernd/Projects/SlurmCluster/logs/slurmctld.log" 2025-7-10-11:53:29
+"/home/bernd/Projects/SlurmCluster/slurmdbd.log" 2025-7-9-18:0:0
+"/home/bernd/Projects/SlurmCluster/logs/slurmd.log" 2025-7-10-11:53:29
+"/home/bernd/Projects/SlurmCluster/logs/slurmdbd.log" 2025-7-10-11:53:29

@@ -1,0 +1,13 @@
+###
+# Slurm cgroup support configuration file
+###
+
+# Disable cgroup constraints for now to avoid issues
+ConstrainCores=no
+ConstrainDevices=no
+ConstrainRAMSpace=no
+ConstrainSwapSpace=no
+
+# Memory constraints
+MemorySwappiness=1
+AllowedRAMSpace=100.0

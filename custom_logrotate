@@ -1,0 +1,29 @@
+/home/bernd/Projects/SlurmCluster/logs/slurmctld.log {
+    maxsize 10M
+    daily
+    dateext
+    rotate 30
+    copytruncate
+    missingok
+    compress
+}
+
+/home/bernd/Projects/SlurmCluster/logs/slurmdbd.log {
+    maxsize 10M
+    daily
+    dateext
+    rotate 30
+    copytruncate
+    missingok
+    compress
+}
+
+/home/bernd/Projects/SlurmCluster/logs/slurmd.log {
+    maxsize 10M
+    daily
+    dateext
+    rotate 30
+    copytruncate
+    missingok
+    compress
+}

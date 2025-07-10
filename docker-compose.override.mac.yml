@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # MacBook CPU-only worker
+  slurmd-mac:
+    image: slurm:latest
+    container_name: slurmd-mac
+    hostname: macbook-cpu
+    networks:
+      slurm-net:
+        ipv4_address: 172.20.0.21
+    volumes:
+      - ./shared:/etc/slurm:ro
+      - ./logs:/var/log/slurm
+      - /tmp:/tmp
+    environment:
+      - SLURM_NODE_TYPE=worker
+      - SLURM_NODE_NAME=macbook-cpu
+    command: ["slurmd", "-D", "-vvv"]
+    depends_on:
+      - slurmctld
+    restart: unless-stopped
+
+  # MacBook Node Exporter
+  node-exporter-mac:
+    image: prom/node-exporter:latest
+    container_name: node-exporter-mac
+    hostname: node-exporter-mac
+    networks:
+      slurm-net:
+        ipv4_address: 172.20.0.32
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
