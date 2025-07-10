@@ -1,2 +1,5 @@
 # log files
 logs/
+
+# tmp files
+tmp/
